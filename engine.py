@@ -1,67 +1,32 @@
-import os
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.constants import ParseMode
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, CallbackQueryHandler
-from engine import SimulationEngine
+import hashlib
+import random
+import time
+from telegram.helpers import escape_markdown
 
-sim = SimulationEngine()
+class SimulationEngine:
+    def __init__(self):
+        self.balance = 24500.50
+        # Realistic 2026 Price
+        self.btc_price = 82450.75 
 
-# --- UI CONSTANTS ---
-HEADER = "✨ *VORTEX PROTOCOL v2\.6*\n━━━━━━━━━━━━━━━━━━━━\n"
-FOOTER = "\n━━━━━━━━━━━━━━━━━━━━\n📍 _Simulated Environment_"
+    def get_market_data(self):
+        # Adds a bit of random "live" movement
+        fluctuation = random.uniform(-50.5, 50.5)
+        return self.btc_price + fluctuation
 
-def main_menu_keyboard():
-    keyboard = [
-        [InlineKeyboardButton("📊 Portfolio", callback_data='balance'),
-         InlineKeyboardButton("💸 Withdraw", callback_data='withdraw')],
-        [InlineKeyboardButton("🌐 Network Status", callback_data='status')]
-    ]
-    return InlineKeyboardMarkup(keyboard)
+    def generate_tx_hash(self):
+        raw_str = f"TX-{random.random()}-{time.time()}"
+        return hashlib.sha256(raw_str.encode()).hexdigest()
 
-# --- HANDLERS ---
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = (f"{HEADER}"
-            f"👤 *Identity:* `{sim.safe(update.effective_user.first_name)}`\n"
-            f"🛡️ *Node:* `Encrypted Hub`\n\n"
-            f"Welcome to the future of paper trading\.")
-    await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN_V2, reply_markup=main_menu_keyboard())
+    def generate_access_code(self):
+        # 2026 security-style format
+        chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+        code = "".join(random.choices(chars, k=8))
+        return f"VX-{code[:4]}-{code[4:]}"
 
-async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer() # Removes the loading spinner on the button
-    
-    if query.data == 'balance':
-        price = sim.get_market_data()
-        text = (f"{HEADER}"
-                f"💰 *Balance:* `${sim.safe(f'{sim.balance:,.2f}')} USDT`\n"
-                f"₿ *BTC Price:* `${sim.safe(f'{price:,.2f}')}`\n"
-                f"📈 *Pnl \(24h\):* `+4\.25%`{FOOTER}")
-        await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN_V2, reply_markup=main_menu_keyboard())
+    def get_scan_link(self, tx_hash):
+        return f"https://www.blockchain.com/explorer/transactions/btc/{tx_hash}"
 
-    elif query.data == 'withdraw':
-        tx = sim.generate_tx_hash()
-        code = sim.generate_access_code()
-        link = sim.get_scan_link(tx)
-        text = (f"{HEADER}"
-                f"📤 *Withdrawal Initialized*\n\n"
-                f"🔑 *Access Key:* `{sim.safe(code)}`\n"
-                f"🔗 *TXID:* [View on BTC Scan]({link})\n"
-                f"⏳ *Estimate:* `~2 mins`{FOOTER}")
-        await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN_V2, reply_markup=main_menu_keyboard(), disable_web_page_preview=True)
-
-    elif query.data == 'status':
-        text = (f"{HEADER}"
-                f"🟢 *System:* `Operational`\n"
-                f"📡 *Latency:* `14ms`\n"
-                f"🛰️ *Nodes:* `9,402 Active`{FOOTER}")
-        await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN_V2, reply_markup=main_menu_keyboard())
-
-if __name__ == '__main__':
-    TOKEN = os.environ.get("TELEGRAM_TOKEN")
-    app = ApplicationBuilder().token(TOKEN).build()
-    
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(handle_callback))
-    
-    print("VORTEX 2026 is LIVE...")
-    app.run_polling()
+    def safe(self, text):
+        """Escapes text for Telegram MarkdownV2"""
+        return escape_markdown(str(text), version=2)
