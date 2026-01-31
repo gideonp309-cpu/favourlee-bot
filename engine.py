@@ -1,15 +1,22 @@
+import hashlib
 import random
+import time
 
 class SimulationEngine:
     def __init__(self):
-        # Initial simulated state
-        self.balance = 10000.0  # Simulated USDT
-        self.portfolio = {}     # { "BTC": 0.5 }
+        self.balance = 24500.50
+        self.ticker = "BTC"
 
-    def get_simulated_price(self, ticker):
-        # Mock price generator
-        prices = {"BTC": 45000, "ETH": 2500, "SOL": 100}
-        return prices.get(ticker.upper(), 1.0) * (1 + random.uniform(-0.01, 0.01))
+    def generate_tx_hash(self):
+        # Generates a realistic 64-character BTC transaction hash
+        raw_str = f"TX-{random.random()}-{time.time()}"
+        return hashlib.sha256(raw_str.encode()).hexdigest()
 
-    def get_wallet_address(self):
-        return "0xSimulated_" + "7b2e...9a1c"
+    def generate_access_code(self):
+        # 2026-style secure simulated access key
+        prefix = random.choice(["X-VOID", "Z-CORE", "ALPHA"])
+        suffix = random.randint(1000, 9999)
+        return f"{prefix}-{suffix}-TXN"
+
+    def get_scan_link(self, tx_hash):
+        return f"https://www.blockchain.com/explorer/transactions/btc/{tx_hash}"
